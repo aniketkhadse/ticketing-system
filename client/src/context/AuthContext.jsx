@@ -16,7 +16,7 @@ export const AuthProvider = ({ children }) => {
   const [admin, setAdmin] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const API_URL = 'https://ticketing-system-production-9023.up.railway.app/';
+  const API_URL = 'https://ticketing-system-production-9023.up.railway.app/api';
 
   useEffect(() => {
     const token = localStorage.getItem('token');

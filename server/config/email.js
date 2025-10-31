@@ -30,7 +30,7 @@ const sendOTPEmail = async (email, otp) => {
 };
 
 const sendPasswordResetEmail = async (email, resetToken) => {
-  const resetLink = `http://localhost:5173/reset-password/${resetToken}`;
+  const resetLink = `https://ticketing-system-cyan.vercel.app/reset-password/${resetToken}`;
   
   const mailOptions = {
     from: process.env.EMAIL_USER,
@@ -84,7 +84,7 @@ const sendNewTicketEmail = async (adminEmail, ticketData) => {
               <td style="padding: 10px;">${ticketData.query}</td>
             </tr>
           </table>
-          <a href="http://localhost:5173/admin" style="display: inline-block; padding: 12px 30px; background-color: #2196F3; color: white; text-decoration: none; border-radius: 5px; margin-top: 20px;">View in Admin Panel</a>
+          <a href="https://ticketing-system-cyan.vercel.app/admin" style="display: inline-block; padding: 12px 30px; background-color: #2196F3; color: white; text-decoration: none; border-radius: 5px; margin-top: 20px;">View in Admin Panel</a>
         </div>
       </div>
     `,
@@ -124,7 +124,7 @@ const sendTicketStatusEmail = async (userEmail, ticketData) => {
             </tr>
             ` : ''}
           </table>
-          <a href="http://localhost:5173/dashboard" style="display: inline-block; padding: 12px 30px; background-color: #2196F3; color: white; text-decoration: none; border-radius: 5px; margin-top: 20px;">View Ticket</a>
+          <a href="https://ticketing-system-cyan.vercel.app/dashboard" style="display: inline-block; padding: 12px 30px; background-color: #2196F3; color: white; text-decoration: none; border-radius: 5px; margin-top: 20px;">View Ticket</a>
         </div>
       </div>
     `,
