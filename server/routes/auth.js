@@ -15,20 +15,26 @@ router.post('/register', async (req, res) => {
   try {
     const { name, email, password } = req.body;
 
+    console.log('📝 Registration attempt:', { name, email });
+
     // Validate email domain
     if (!email.endsWith('@aristasystems.in')) {
+      console.log('❌ Invalid email domain:', email);
       return res.status(400).json({ message: 'Email must be from @aristasystems.in domain' });
     }
 
     // Check if user exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
+      console.log('❌ User already exists:', email);
       return res.status(400).json({ message: 'User already exists' });
     }
 
     // Generate OTP
     const otp = generateOTP();
     const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+    console.log('🔑 Generated OTP:', otp);
 
     // Create user
     const user = new User({
@@ -42,16 +48,23 @@ router.post('/register', async (req, res) => {
     });
 
     await user.save();
+    console.log('✅ User saved to database');
 
     // Send OTP email
-    await sendOTPEmail(email, otp);
+    try {
+      await sendOTPEmail(email, otp);
+      console.log('✅ OTP email sent successfully');
+    } catch (emailError) {
+      console.error('❌ Failed to send OTP email:', emailError);
+      // Continue even if email fails - user can resend OTP
+    }
 
     res.status(201).json({ 
       message: 'Registration successful. Please verify your email with the OTP sent.',
       userId: user._id 
     });
   } catch (error) {
-    console.error('Registration error:', error);
+    console.error('❌ Registration error:', error);
     res.status(500).json({ message: 'Registration failed', error: error.message });
   }
 });
@@ -61,20 +74,28 @@ router.post('/verify-otp', async (req, res) => {
   try {
     const { userId, otp } = req.body;
 
+    console.log('🔍 OTP verification attempt:', { userId, otp });
+
     const user = await User.findById(userId);
     if (!user) {
+      console.log('❌ User not found:', userId);
       return res.status(404).json({ message: 'User not found' });
     }
 
     if (user.isVerified) {
+      console.log('⚠️ Email already verified:', user.email);
       return res.status(400).json({ message: 'Email already verified' });
     }
 
+    console.log('📋 Stored OTP:', user.otp.code, 'Provided OTP:', otp);
+
     if (user.otp.code !== otp) {
+      console.log('❌ Invalid OTP');
       return res.status(400).json({ message: 'Invalid OTP' });
     }
 
     if (new Date() > user.otp.expiresAt) {
+      console.log('❌ OTP expired');
       return res.status(400).json({ message: 'OTP has expired' });
     }
 
@@ -82,9 +103,11 @@ router.post('/verify-otp', async (req, res) => {
     user.otp = undefined;
     await user.save();
 
+    console.log('✅ Email verified successfully:', user.email);
+
     res.json({ message: 'Email verified successfully' });
   } catch (error) {
-    console.error('OTP verification error:', error);
+    console.error('❌ OTP verification error:', error);
     res.status(500).json({ message: 'Verification failed', error: error.message });
   }
 });
@@ -94,17 +117,23 @@ router.post('/resend-otp', async (req, res) => {
   try {
     const { userId } = req.body;
 
+    console.log('🔄 Resend OTP attempt:', userId);
+
     const user = await User.findById(userId);
     if (!user) {
+      console.log('❌ User not found:', userId);
       return res.status(404).json({ message: 'User not found' });
     }
 
     if (user.isVerified) {
+      console.log('⚠️ Email already verified:', user.email);
       return res.status(400).json({ message: 'Email already verified' });
     }
 
     const otp = generateOTP();
     const otpExpires = new Date(Date.now() + 10 * 60 * 1000);
+
+    console.log('🔑 New OTP generated:', otp);
 
     user.otp = {
       code: otp,
@@ -112,11 +141,16 @@ router.post('/resend-otp', async (req, res) => {
     };
     await user.save();
 
-    await sendOTPEmail(user.email, otp);
+    try {
+      await sendOTPEmail(user.email, otp);
+      console.log('✅ OTP resent successfully');
+    } catch (emailError) {
+      console.error('❌ Failed to resend OTP email:', emailError);
+    }
 
     res.json({ message: 'OTP resent successfully' });
   } catch (error) {
-    console.error('Resend OTP error:', error);
+    console.error('❌ Resend OTP error:', error);
     res.status(500).json({ message: 'Failed to resend OTP', error: error.message });
   }
 });
@@ -126,17 +160,28 @@ router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
 
+    console.log('🔐 Login attempt:', email);
+
     const user = await User.findOne({ email });
     if (!user) {
+      console.log('❌ User not found:', email);
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
+    console.log('👤 User found:', { email: user.email, isVerified: user.isVerified });
+
     if (!user.isVerified) {
-      return res.status(401).json({ message: 'Please verify your email first', userId: user._id });
+      console.log('⚠️ User not verified:', email);
+      return res.status(401).json({ 
+        message: 'Please verify your email first', 
+        userId: user._id,
+        needsVerification: true 
+      });
     }
 
     const isPasswordValid = await user.comparePassword(password);
     if (!isPasswordValid) {
+      console.log('❌ Invalid password for:', email);
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
@@ -145,6 +190,8 @@ router.post('/login', async (req, res) => {
       process.env.JWT_SECRET,
       { expiresIn: '7d' }
     );
+
+    console.log('✅ Login successful:', email);
 
     res.json({
       token,
@@ -155,7 +202,7 @@ router.post('/login', async (req, res) => {
       },
     });
   } catch (error) {
-    console.error('Login error:', error);
+    console.error('❌ Login error:', error);
     res.status(500).json({ message: 'Login failed', error: error.message });
   }
 });
@@ -165,7 +212,10 @@ router.post('/admin-login', async (req, res) => {
   try {
     const { email, password } = req.body;
 
+    console.log('🔐 Admin login attempt:', email);
+
     if (email !== process.env.ADMIN_EMAIL || password !== process.env.ADMIN_PASSWORD) {
+      console.log('❌ Invalid admin credentials');
       return res.status(401).json({ message: 'Invalid admin credentials' });
     }
 
@@ -175,6 +225,8 @@ router.post('/admin-login', async (req, res) => {
       { expiresIn: '7d' }
     );
 
+    console.log('✅ Admin login successful');
+
     res.json({
       token,
       admin: {
@@ -183,7 +235,7 @@ router.post('/admin-login', async (req, res) => {
       },
     });
   } catch (error) {
-    console.error('Admin login error:', error);
+    console.error('❌ Admin login error:', error);
     res.status(500).json({ message: 'Admin login failed', error: error.message });
   }
 });
@@ -193,8 +245,11 @@ router.post('/forgot-password', async (req, res) => {
   try {
     const { email } = req.body;
 
+    console.log('🔑 Forgot password request:', email);
+
     const user = await User.findOne({ email });
     if (!user) {
+      console.log('❌ User not found:', email);
       return res.status(404).json({ message: 'User not found' });
     }
 
@@ -203,11 +258,16 @@ router.post('/forgot-password', async (req, res) => {
     user.resetPasswordExpires = Date.now() + 3600000; // 1 hour
     await user.save();
 
-    await sendPasswordResetEmail(email, resetToken);
+    try {
+      await sendPasswordResetEmail(email, resetToken);
+      console.log('✅ Password reset email sent');
+    } catch (emailError) {
+      console.error('❌ Failed to send reset email:', emailError);
+    }
 
     res.json({ message: 'Password reset link sent to your email' });
   } catch (error) {
-    console.error('Forgot password error:', error);
+    console.error('❌ Forgot password error:', error);
     res.status(500).json({ message: 'Failed to send reset link', error: error.message });
   }
 });
@@ -218,6 +278,8 @@ router.post('/reset-password/:token', async (req, res) => {
     const { password } = req.body;
     const resetToken = req.params.token;
 
+    console.log('🔄 Password reset attempt with token');
+
     const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');
 
     const user = await User.findOne({
@@ -226,6 +288,7 @@ router.post('/reset-password/:token', async (req, res) => {
     });
 
     if (!user) {
+      console.log('❌ Invalid or expired token');
       return res.status(400).json({ message: 'Invalid or expired reset token' });
     }
 
@@ -234,9 +297,11 @@ router.post('/reset-password/:token', async (req, res) => {
     user.resetPasswordExpires = undefined;
     await user.save();
 
+    console.log('✅ Password reset successful:', user.email);
+
     res.json({ message: 'Password reset successful' });
   } catch (error) {
-    console.error('Reset password error:', error);
+    console.error('❌ Reset password error:', error);
     res.status(500).json({ message: 'Failed to reset password', error: error.message });
   }
 });

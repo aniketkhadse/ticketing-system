@@ -19,32 +19,33 @@ const Login = () => {
     setError('');
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  setError('');
 
-    if (!formData.email || !formData.password) {
-      setError('All fields are required');
-      return;
+  if (!formData.email || !formData.password) {
+    setError('All fields are required');
+    return;
+  }
+
+  setLoading(true);
+
+  try {
+    await login(formData.email, formData.password);
+    navigate('/dashboard');
+  } catch (err) {
+    // Check if user needs verification
+    if (err.response?.data?.needsVerification && err.response?.data?.userId) {
+      navigate('/verify-otp', {
+        state: { userId: err.response.data.userId, email: formData.email },
+      });
+    } else {
+      setError(err.response?.data?.message || 'Login failed');
     }
-
-    setLoading(true);
-
-    try {
-      await login(formData.email, formData.password);
-      navigate('/dashboard');
-    } catch (err) {
-      if (err.response?.data?.userId) {
-        navigate('/verify-otp', {
-          state: { userId: err.response.data.userId, email: formData.email },
-        });
-      } else {
-        setError(err.response?.data?.message || 'Login failed');
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center px-4">
