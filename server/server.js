@@ -41,9 +41,11 @@ app.get("/api/test-email", async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+app.get("/api/health", (req, res) => {
+  res.json({ status: "OK", message: "Server is running" });
+});
 
 const PORT = process.env.PORT || 5000;
-
-app.listen(PORT, () => {
+app.listen(PORT, "0.0.0.0", () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });
