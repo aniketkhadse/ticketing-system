@@ -1,4 +1,5 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
+const { getNextSequence } = require("./Counter");
 
 const commentSchema = new mongoose.Schema({
   text: {
@@ -11,7 +12,7 @@ const commentSchema = new mongoose.Schema({
   },
   authorType: {
     type: String,
-    enum: ['user', 'admin'],
+    enum: ["user", "admin"],
     required: true,
   },
   createdAt: {
@@ -28,7 +29,7 @@ const ticketSchema = new mongoose.Schema({
   },
   userId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
+    ref: "User",
     required: true,
   },
   userName: {
@@ -49,12 +50,12 @@ const ticketSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['pending', 'solved', 'error'],
-    default: 'pending',
+    enum: ["pending", "solved", "error"],
+    default: "pending",
   },
   adminComment: {
     type: String,
-    default: '',
+    default: "",
   },
   comments: [commentSchema],
   createdAt: {
@@ -67,20 +68,19 @@ const ticketSchema = new mongoose.Schema({
   },
 });
 
-// Auto-generate ticket ID
-// Auto-generate ticket ID
-ticketSchema.pre('save', async function (next) {
+// Auto-generate ticket ID using counter (prevents race conditions)
+ticketSchema.pre("save", async function (next) {
   try {
     if (this.isNew && !this.ticketId) {
-      const Ticket = this.constructor;
-      const count = await Ticket.countDocuments();
-      this.ticketId = `TKT-${String(count + 1).padStart(6, '0')}`;
+      const seq = await getNextSequence("ticketId");
+      this.ticketId = `TKT-${String(seq).padStart(6, "0")}`;
     }
     this.updatedAt = Date.now();
     next();
   } catch (error) {
+    console.error("Error generating ticket ID:", error);
     next(error);
   }
 });
 
-module.exports = mongoose.model('Ticket', ticketSchema);
+module.exports = mongoose.model("Ticket", ticketSchema);
