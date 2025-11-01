@@ -44,6 +44,9 @@ app.get("/api/test-email", async (req, res) => {
 app.get("/api/health", (req, res) => {
   res.json({ status: "OK", message: "Server is running" });
 });
+app.get("/", (req, res) => {
+  res.send("Backend is running!");
+});
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, "0.0.0.0", () => {
